@@ -2,8 +2,12 @@ import math
 import sys
 import itertools
 import os
+from konlpy.tag import Kkma
 
 class Similarity(object):
+    def __init__(self):
+        self.kkma = Kkma()
+
     def check_similarity(self, dir_path):
         return self.parse_path(dir_path)
 
@@ -62,6 +66,20 @@ class Similarity(object):
             magnitude = 1
         return dot_product / magnitude
 
+    def get_word_dict2(self, data):
+        data = data.strip()
+        m = {}
+
+        words = self.kkma.nouns(data)
+        for word in words:
+            word = word.lower()
+            if word in m:
+                m[word] += 1
+            else:
+                m[word] = 1
+
+        return m
+
     def get_word_dict(self, data):
         data = data.strip()
         m = {}
@@ -81,7 +99,7 @@ class Similarity(object):
         
 if __name__ == '__main__':
     sim = Similarity()
-#    print(sim.cosine_similarity_from_file(sys.argv[1], sys.argv[2]))
-#    print(sim.jacard_similarity_from_file(sys.argv[1], sys.argv[2]))
-    for i in sim.check_similarity(sys.argv[1]):
+    ret = sim.check_similarity(sys.argv[1])
+    sl = sorted(ret, key=lambda x: x[1], reverse=True)
+    for i in sl:
         print(i)
