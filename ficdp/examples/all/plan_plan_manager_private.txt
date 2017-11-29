@@ -1,0 +1,747 @@
+Redis
+ 
+기능의 변화
+- 3.x 
+부터 최근까지
+글로벌 오픈 
+프론티어
+ 
+4
+기 파트
+,
+ 
+강대명
+발표자 소개
+강대명
+Redis
+ Contributor
+RedisConf
+ 2016 Speaker
+오늘 할 이야기들
+Redis
+ 3.x 
+부터 최근까지
+(2.8
+도 조금
+)
+가볍게 살펴보고 깊게 들어가지 않습니다
+.
+버전
+추가된 기능
+2.8
+HyperLogLog
+3.0
+Redis
+ Cluster
+3.2
+GeoHash
+4.0
+Redis
+ Module
+HyperLogLog
+ #1
+From 2.8
+유니크한
+ 유저를 구하는 방법
+원리는 논문을 참고하세요
+. 
+키워드로 검색하면 바로 나옵니다
+.
+저도 원리는 모릅니다
+.(
+묻지말아주세요
+. 
+해당 질문도 사절합니다
+.)
+http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf
+HyperLogLog
+ #2
+화장품 광고의 
+타켓
+ 두 그룹
+A: 20
+대 후반 여성
+(50
+만명
+)
+B: 
+서울의 여성
+(100
+만명
+)
+A+B
+의 
+Unique 
+한 광고 타겟은 몇 명일까
+?
+50
+만명 
++ 100
+만명
+ = 150
+만명
+?
+유니크한
+ 유저를 다시 구해야 할까요
+?
+다른 광고 
+타켓
+ 
+C
+가 추가되면
+?
+HyperLogLog
+ #3
+유니크 유저는 어떻게 구해야 하나요
+?
+A
+그룹을 로딩해서
+, B
+그룹에 존재하는지 일일이 찾아야 합니다
+.
+유저 수가 클 수록 시간이 많이 걸리게 됩니다
+.
+HyperLogLog
+ #3
+HyperLogLog
+를 쓰시면 
+A
+그룹과 
+B
+그룹을 
+pfmerge
+ 
+하면됩니다
+. 
+확률적 
+자료구조중에
+ 하나
+!!!
+실제로 정확한 값 대신에 근사값을 구하는 방법
+정확성을 포기하는 대신에 속도와 메모리에서 이득을 봄
+메모리를 더 쓰면
+, 
+정확도가 더 올라감
+.
+거의 고정된 메모리를 사용합니다
+.
+확륙적
+ 자료구조는 다음페이지를 참고하세요
+.
+http://d2.naver.com/helloworld/711301
+Redis
+ Set
+HyperLogLog
+유일한 개수
+67,781
+67,640
+HyperLogLog
+ #4
+PFADD, PFCOUNT, PFMERGE 
+의 세 가지 명령이 있습니다
+.
+명령어
+내용
+PFADD
+HyperLogLog
+ 
+를 생성한다
+.
+PFCOUNT
+HyperLogLog
+ 
+내의 
+Unique
+한 값을 보여준다
+.
+PFMERGE
+HyperLogLog
+ 
+그룹을 하나로 합쳐준다
+.
+HyperLogLog
+ #5
+PFADD pf1 a b c d e f g
+PFCOUNT pf1
+7
+PFADD pf1 a b c z 
+PFCOUNT pf1
+8
+PFADD pf2 e1 e2 e3 e4 a b
+PFCOUNT pf2
+6
+PFMERGE pf3 pf1 pf2
+PFCOUNT pf3
+12
+HyperLogLog
+ #6
+당연히 전체 데이터를 가지고 있지 않으므로
+, 
+전체 목록을 얻을 수 없음
+.
+즉 해당 목록은 따로 관리하고 있어야 함
+.
+Redis
+ Cluster #1
+From 3.0
+모두가 기다리던 
+Redis
+ Cluster
+그런데 결과적으로는 좋아하는 곳도 있고
+,
+아닌곳도
+ 많습니다
+.
+Redis
+ Cluster #2
+동작원리
+미리 
+16384 
+개의 
+Hash Slot
+을 정의해두고 주어진 노드들에게 할당한다
+.
+Node #1 : 0 ~ 5461
+Node #2: 5462 ~ 10922
+Node #3: 10923 ~ 16384
+crc16(key) % 16384 = 0 
+면
+, 0
+가 속하는 노드에 저장됨
+.
+Node #1
+Master
+Node #2
+Master
+Node #3
+Master
+Node #1
+Slave
+Node #2
+Slave
+Node #3
+Slave
+Client
+crc16(“
+kosslab
+”) % 16384 = 0        
+저장
+Redis
+ Cluster #3
+Slave 
+노드는 자신의 
+Master
+의 내용만 들고 있음
+.
+즉 
+Node #2
+의 
+Master, Slave 
+가 모두 장애가 났을 때는 그냥 데이터 유실
+.
+Slot
+의 재분배를 통해서 데이터의 이동이 가능함
+.
+Migration 
+중인 
+Slot
+은 잠시 사용 불가
+.
+Redis
+ Cluster #4
+Redirection
+Node #1
+Master
+Node #2
+Master
+Node #3
+Master
+Client
+set 
+kosslab
+ 123
+<- MOVED 0 127.0.0.1:7002
+Redis
+ Cluster #5
+No Redirection
+Node #1
+Master
+Node #2
+Master
+Node #3
+Master
+Client
+set 
+kosslab
+ 123
+저장
+Redis
+ Cluster #6 – no cli cluster mode
+cli> set 
+kosslab
+ 123
+-> (error) MOVED 0 127.0.0.1:7002
+cli> set 
+openfrontier
+ 123
+-> (error) MOVED 13000 located at 127.0.0.1:7000 
+cli> get 
+kosslab
+-> (error) MOVED 0 127.0.0.1:7002
+cli> get 
+openfrontier
+-> (error) MOVED 0 127.0.0.1:7000
+Redis
+ Cluster #6 – cli cluster mode
+cli:7001> set 
+kosslab
+ 123
+-> Redirected to slot [0] located at 127.0.0.1:7002
+OK
+cli:7002> set 
+openfrontier
+ 123
+-> Redirected to slot [0] located at 127.0.0.1:7000
+OK 
+cli:7000> get 
+kosslab
+Redirected to slot [0] located at 127.0.0.1:7002
+“123”
+cli:7002> get 
+openfrontier
+Redirected to slot [0] located at 127.0.0.1:7000
+“123”
+이 부분은 
+cli
+에서만 처리해주는 것이므로
+, 
+Redis
+ Cluster
+가 해준다고 착각하면 안됨
+Redis
+ Cluster #7
+장애 시 동작
+Node #1
+Master
+Node #2
+Master
+Node #3
+Master
+Node #1
+Slave
+Node #2
+Slave
+Node #3
+Slave
+Client
+Redis
+ Cluster #8
+장애 시 동작
+Node #1
+Master
+Node #2
+Master
+Node #3
+Master
+Node #1
+Slave
+Node #2
+Slave
+Node #3
+Slave
+Client
+Master
+로 승격
+Redis
+ Cluster #9
+장애 시 동작
+Node #1
+Master
+Node #2
+Master
+Node #3
+Master
+Node #1
+Master
+Node #2
+Slave
+Node #3
+Slave
+Client
+Redis
+ Cluster #10
+장애 시 동작
+Node #1
+Master
+Node #2
+Master
+Node #3
+Master
+Node #2
+Slave
+Node #3
+Slave
+Client
+Redis
+ Cluster #11
+Node #1
+의 
+Old Master
+가 살아나면 
+Slave 
+가 됨
+.
+Node #1
+Master
+Node #2
+Master
+Node #3
+Master
+Node #2
+Slave
+Node #3
+Slave
+Client
+Node #1
+Old
+ 
+Master
+Redis
+ Cluster #12
+남아있던 
+Master
+도 
+장애나면
+ 데이터 유실
+Node #1
+Master
+Node #2
+Master
+Node #3
+Master
+Node #2
+Slave
+Node #3
+Slave
+Client
+Redis
+ Cluster #13
+실제로 쓰는 사례가 있나요
+?
+C
+모사
+, L
+모사
+특히 
+L
+모사에서는 좀 크게
+, 
+엄청 잘 쓰고 있다고 합니다
+.
+좀 더 안정적으로 
+운영할려면
+?
+Slave
+를 두 개씩 쓰거나
+…
+특정 노드의 
+Master 
+가 죽으면
+… 
+곧
+, 
+새 
+Slave
+를 하나 추가해주거나
+…
+Redis
+ Cluster #14
+장애 시 동작
+Node #1
+Master
+Node #2
+Master
+Node #3
+Master
+Node #2
+Slave
+Node #3
+Slave
+Client
+New
+ 
+Node
+추가
+GeoHash
+ #1
+From 3.2
+Redis
+ 
+도 
+GeoHash
+가 지원됩니다
+.
+우버
+ 같은 서비스를 만든다면
+?
+각 
+우버드라이버의
+ 위치
+ 
+정보가 존재
+(
+지속적 업데이트
+)
+우버사용자의
+ 위치가 존재
+현재 사용자의 위치에서 반경 
+K 
+킬로미터에 있는 
+우버드라이버의
+ 리스트를 가져온다면
+?
+우버나
+ 포스퀘어나 
+MongoDB
+에 저장하는 걸로
+…
+K
+모 서비스도
+…
+실제로는 
+geohash
+를 만들어서 
+Sorted Set
+에 저장합니다
+.
+GeoHash
+ #2
+명령어
+내용
+GEOADD
+GEO Location 
+정보를 추가한다
+.
+GEOHASH
+해당 위치 정보에 대한 
+해식밧을
+ 출력한다
+.
+GEOPOS
+해당 유저의 지역정보를 출력한다
+.
+GEODIST
+두 
+지역간의
+ 거리를 출력한다
+.
+GEORADIUS
+특정 지역 반경에 존재하는 객체를 조회한다
+.
+GEORADIUSBYMEMBER
+특정 객체 반경에 존재하는 객체를 조회한다
+.
+GeoHash
+ 
+#3
+cli> GEOADD 
+coex
+ 127.0590198 37.5119854 
+bugerking
+ 127.0588857 37.5127556 
+coex_sb
+ 127.0601088 37.5153427 
+bong_sb
+cli> GEORADIUSBYMEMBER 
+coex
+ 
+bugerking
+ 1 km
+1) "
+bugerking
+"
+2) "
+coex_sb
+"
+3) "
+bong_sb
+"
+cli> GEORADIUSBYMEMBER 
+coex
+ 
+bugerking
+ 100 m
+1) "
+bugerking
+"
+2) "
+coex_sb
+"
+cli> GEORADIUSBYMEMBER 
+coex
+ 
+bugerking
+ 10 m
+1) "
+bugerking
+"
+Redis
+ Module #1
+From 4.0
+Redis
+는 
+lua
+ script
+를 지원함
+.
+lua
+ 
+script
+ 사용의 단점
+성능이 느리다
+.(
+네이티브로 돌았으면 좋겠다
+.)
+그러면서 다양한 기능을 커버했으면 좋겠다
+.
+Redis
+ PR
+의 대부분은 기능 추가
+기존에 잘 받아들여지지 않음
+.(
+가벼운
+(?) 
+서버를 지향
+.)
+Redis
+ Module #2
+Redis
+ Module
+Dynamic Loading Library(.so)
+플러그인 방식으로 
+Redis
+ Command
+를 동적으로 등록할 수 있다
+.
+기존 명령을 바꿀 수는 없지만
+, 
+내부적으로 사용이 가능
+새로운 명령을 등록함으로써
+, 
+자료구조를 추가할 수 있다
+.
+Redis
+ Module #3
+RedisLabs
+ Module Repository
+https://github.com/RedisLabsModules
+bloomfilter
+, Full-Text Search 
+같은 모듈이 이미 만들어져 있음
+Redis
+ Module #4
+모듈
+ 
+작성시 주의 사항
+Redis
+는 
+Single Threaded 
+이므로
+, 
+모듈에서 긴 시간 처리하는 경우 
+Redis
+ 
+자체가 
+블럭되어
+ 버림
+.
+모듈에서 장애가 날 경우
+, 
+Redis
+ 
+서버 자체가 종료됨
+.
+Master/Slave 
+형태일 경우는
+, 
+장애를 대비해서 
+Slave 
+들도 해당 모듈을 다 
+로드해야함
+.
+Redis
+ 코드 자체가 익숙할 경우는 모듈 개발이 어렵지는 않음
+.
+Redis
+ Module - Rebloom #1
+Bloom Filter Datatype for 
+Redis
+확률적 자료구조 중의 하나
+있다고 하면 없을 수 있으나
+, 
+없다고 하면 반드시 없는 특징을 가짐
+.
+Redis
+ Module - Rebloom #2
+BloomFilter
+의 원리
+BloomFilter
+는 
+BitArray
+ 
+의 일종
+3
+개의 
+hash(x) 
+가 있다고 하고
+, 
+bitarray
+의 크기가 
+16
+이라고 할 때
+foobar
+ 
+가 들어갈 때 세 개의 
+hash
+에 나온 값을 
+masking 
+한다
+.
+Redis
+ Module - Rebloom #3
+있는지 검사시에 해당 
+bit 
+가 모두 
+마스킹
+ 되어있으면 있다고 가정한다
+.
+실제로 다른 
+hash 
+함수에 의해서 이미 
+masking 
+되어 있을 수 있으므로
+, false positive(
+없는데
+, 
+있다고 하는게
+…) 
+발생함
+그러나 없다고 한 경우는 해당 
+bit
+가 
+masking
+되지 않았으므로 절대로 없음
+.
+ETC
+최근에 개발되는 것들은
+streams 
+라든지
+…(unstable/streams branch)
+siphash
+의 적용
+(from 4.0 RC3)
+hash table DDOS attach
+을 
+막아줌
+.
+Thanks you!

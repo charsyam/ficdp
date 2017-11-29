@@ -1,0 +1,176 @@
+Learning
+ Spark ch.6
+부제 
+:
+ 고급 스파크 프로그래밍
+Kim, Jun (
+김준
+)
+[
+스사모
+/
+싸이지먼트 지원
+]
+Accumulator 
+Cluster 
+상황인 경우 각 처리 내용의 모든 내용이 
+return 
+되지는 않는다
+.
+분산환경의 결과를 수집하기 위함
+.
+Accumulator
+Broadcasting variable
+그러나 
+spark 2.0.0
+이후 
+deprecated 
+됨
+.. 
+그리고
+ 
+org.apache.spark.util.AccumulatorV2
+ 권고함
+.
+ ref) https
+://
+sparkour.urizone.net
+/recipes/aggregating-accumulators/
+Accumulator 
+- 1
+Def :  
+def
+ 
+accumulator[T](
+initialValue
+: T, name: String
+) 
+ 
+initialValue
+ : 
+초기값
+Name: 
+해당 
+acuumulator
+ 
+의 이름
+여려개를 실행할수 있음
+단 누적기
+-=,
+ *
+=
+ 는
+?
+Accumulator - 
+2
+아래와 같이 생성
+Val 
+blanklines
+ = 
+sc.accumalator
+(0, “add”)
+결과 이용은 
+blanklines.value
+결과를 
+얻기 위해선 반드시 
+action
+이 필요함
+Transformation
+ 만으로는 연산을 진행하지 않음
+.
+각 작업 노드의 테스크 상에서는 읽기 불가
+Accumulator - 
+3
+Issue
+결과가 제멋
+(?)
+대로
+ 
+한번 생성된  
+accumulator
+ 는 연산 과정에 따라 복수의 누적을 할수 있음
+.
+ 
+더불어 
+lazy 
+연산이기에 중간의 
+cache/persist
+에 따라 해당 연산의 중복 여부가 재 결정됨
+.
+ 
+Ex)
+예상 결과 
+:
+ 
+2
+Case 1) 
+callSigns.foreach
+(
+println
+)
+	       
+callSigns.saveAsTextFile
+(”
+result.txt
+")     => 4 
+Case 2 
+) 
+callSigns.persist
+() 
+             
+callSigns.foreach
+(
+println
+)
+             
+callSigns.foreach
+(
+println
+)                  => 2
+Case 
+3) 
+callSigns.foreach
+(
+println
+)
+            
+callSigns.persist
+() 
+             
+callSigns.foreach
+(
+println
+)                  => 4
+Accumulator - 4
+Iusse
+ :
+기존 작업 내용에 대한 누적을 포함할 수 있다
+.
+ 
+작업 종료로 인한 재실행 시 
+같은 작업이 중복되어 계산될 수 있음
+특히 
+action
+이 아니라  
+transformation
+ 같은 경우 
+RDD
+가 캐시에서 삭제되자 마자 다시 필요해지면 
+(
+앞의 케이스
+)
+ 다시 계산될수 있음
+.
+ 
+Accumulator - 5
+Conclusion : 
+써야한다면 
+AccumlatiorV2
+를 배웁시다
+…
+BroadCast
+ Variable 
+읽기 전용인 값을 모든 작업 노드에 효과적으로 전송하는데 사용
+즉 
+
+

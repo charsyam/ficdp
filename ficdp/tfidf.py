@@ -128,6 +128,9 @@ class TFIDF(object):
 
         for line in data.split('\n'):
             for word in line.split():
+                if '0' <= word[0] <= '9':
+                    continue
+
                 for sword in STEMMING_WORD_LIST:
                     if word.endswith(sword) == True:
                         word = word[:-len(sword)]
@@ -170,10 +173,12 @@ if __name__ == '__main__':
 
             w = t[0]
             if w in m:
-                m[w] += 1  
+                m[w] += t[1]
             else:
-                m[w] = 1
+                m[w] = t[1]
 
     sl = sorted(m.items(), key=lambda x: x[1], reverse=True)
-#    for word in sl:
-#        print(word)
+
+    print("===============================")
+    for word in sl:
+        print(word)
